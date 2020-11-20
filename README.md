@@ -1,23 +1,52 @@
 # Time Series Distances
 
-Library for time series distances (e.g. Dynamic Time Warping) used in the [DTAI Research Group](https://dtai.cs.kuleuven.be).
-The library offers a pure Python implementation and a faster implementation in C.
+Library for time series distances (e.g. Dynamic Time Warping) used in the
+[DTAI Research Group](https://dtai.cs.kuleuven.be). The library offers a pure
+Python implementation and a fast implementation in C.
 
 Documentation: http://dtaidistance.readthedocs.io
 
-Citing this work: [![DOI](https://zenodo.org/badge/80764246.svg)](https://zenodo.org/badge/latestdoi/80764246)
+Citing this work:
+[![DOI](https://zenodo.org/badge/80764246.svg)](https://zenodo.org/badge/latestdoi/80764246)
+
+> Wannes Meert, Kilian Hendrickx, & Toon Van Craenendonck. 
+> wannesm/dtaidistance (Version v2.0.0). Zenodo. 
+> http://doi.org/10.5281/zenodo.3981067
+
+**New in v2**:
+
+- Numpy is now an optional dependency, also to compile the C library
+  (only Cython is required).
+- Small optimizations throughout the C code to improve speed.
+- The consistent use of `ssize_t` instead of `int` allows for larger data structures on 64 bit 
+  machines and be more compatible with Numpy.
+- The parallelization is now implemented directly in C (included if OpenMP is installed).
+- The `max_dist` argument turned out to be similar to Silva and Batista's work 
+  on PrunedDTW [7]. The toolbox now implements a version that is equal to PrunedDTW
+  since it prunes more partial distances. Additionally, a `use_pruning` argument
+  is added to automatically set `max_dist` to the Euclidean distance, as suggested
+  by Silva and Batista, to speed up the computation (a new method `ub_euclidean` is available).
+- Support in the C library for multi-dimensional sequences in the `dtaidistance.dtw_ndim`
+  package.
 
 
 ## Installation
 
-This packages is available on PyPI (requires Python 3):
-
     $ pip install dtaidistance
 
-In case the C based version is not available, see the documentation for alternative installation options.
-In case OpenMP is not available on your system add the `--noopenmp` global option.
+In case the C based version is not available, see the documentation for
+alternative installation options. In case
+[OpenMP](https://www.openmp.org/resources/openmp-compilers-tools/)
+is not available on your system add the `--noopenmp` global option.
 
-The source code is available at [github.com/wannesm/dtaidistance](https://github.com/wannesm/dtaidistance).
+The library has no dependency on Numpy. But if Numpy is available, some
+additional functionality is provided. If you want to make sure this is
+also installed then use:
+
+    $ pip install dtaidistance[numpy]
+
+The source code is available at
+[github.com/wannesm/dtaidistance](https://github.com/wannesm/dtaidistance).
 
 
 ## Usage
@@ -32,7 +61,7 @@ The source code is available at [github.com/wannesm/dtaidistance](https://github
     path = dtw.warping_path(s1, s2)
     dtwvis.plot_warping(s1, s2, path, filename="warp.png")
 
-![Dynamic Time Warping (DTW) Example](https://people.cs.kuleuven.be/wannes.meert/dtw/dtw_example.png?v=4)
+![Dynamic Time Warping (DTW) Example](https://people.cs.kuleuven.be/wannes.meert/dtw/dtw_example.png?v=5)
 
 
 #### DTW Distance Measure Between Two Series
@@ -45,13 +74,14 @@ Only the distance measure based on two sequences of numbers:
     distance = dtw.distance(s1, s2)
     print(distance)
 
-The fastest version (30-300 times) uses c directly but requires an array as input (with the double type):
+The fastest version (30-300 times) uses c directly but requires an array as input (with the double type),
+and (optionally) also prunes computations by setting `max_dist` to the Euclidean upper bound:
 
     from dtaidistance import dtw
     import array
     s1 = array.array('d',[0, 0, 1, 2, 1, 0, 1, 0, 0])
     s2 = array.array('d',[0, 1, 2, 0, 0, 0, 0, 0, 0])
-    d = dtw.distance_fast(s1, s2)
+    d = dtw.distance_fast(s1, s2, use_pruning=True)
 
 Or you can use a numpy array (with dtype double or float):
 
@@ -59,7 +89,7 @@ Or you can use a numpy array (with dtype double or float):
     import numpy as np
     s1 = np.array([0, 0, 1, 2, 1, 0, 1, 0, 0], dtype=np.double)
     s2 = np.array([0.0, 1, 2, 0, 0, 0, 0, 0, 0])
-    d = dtw.distance_fast(s1, s2)
+    d = dtw.distance_fast(s1, s2, use_pruning=True)
 
 
 Check the `__doc__` for information about the available arguments:
@@ -74,7 +104,8 @@ the distance measure computation:
 - `max_step`: Do not allow steps larger than this value.
 - `max_length_diff`: Return infinity if difference in length of two series is larger.
 - `penalty`: Penalty to add if compression or expansion is applied (on top of the distance).
-- `psi`: Psi relaxation to ignore begin and/or end of sequences (for cylical sequencies) [2].
+- `psi`: Psi relaxation to ignore begin and/or end of sequences (for cylical sequences) [2].
+- `use_pruning`: Prune computations based on the Euclidean upper bound.
 
 
 #### DTW Distance Measure all warping paths
@@ -92,15 +123,20 @@ The matrix with all warping paths can be visualised as follows:
 
     from dtaidistance import dtw
     from dtaidistance import dtw_visualisation as dtwvis
+    import random
     import numpy as np
     x = np.arange(0, 20, .5)
     s1 = np.sin(x)
     s2 = np.sin(x - 1)
+    random.seed(1)
+    for idx in range(len(s2)):
+        if random.random() < 0.05:
+            s2[idx] += (random.random() - 0.5) / 2
     d, paths = dtw.warping_paths(s1, s2, window=25, psi=2)
     best_path = dtw.best_path(paths)
     dtwvis.plot_warpingpaths(s1, s2, paths, best_path)
 
-![DTW Example](https://people.cs.kuleuven.be/wannes.meert/dtw/warping_paths.png?v=2)
+![DTW Example](https://people.cs.kuleuven.be/wannes.meert/dtw/warping_paths.png?v=3)
 
 Notice the `psi` parameter that relaxes the matching at the beginning and end.
 In this example this results in a perfect match even though the sine waves are slightly shifted.
@@ -190,13 +226,15 @@ tree can be visualised:
 ## Dependencies
 
 - [Python 3](http://www.python.org)
-- [Numpy](http://www.numpy.org)
 
 Optional:
 
 - [Cython](http://cython.org)
+- [Numpy](http://www.numpy.org)
 - [tqdm](https://github.com/tqdm/tqdm)
-- [matplotlib](https://matplotlib.org)
+- [Matplotlib](https://matplotlib.org)
+- [SciPy](https://www.scipy.org)
+- [PyClustering](https://pyclustering.github.io)
 
 Development:
 
@@ -206,8 +244,7 @@ Development:
 
 ## Contact
 
-- [Wannes Meert](https://people.cs.kuleuven.be/wannes.meert)  
-  <[Wannes.Meert@cs.kuleuven.be](mailto:Wannes.Meert@cs.kuleuven.be)>
+- https://people.cs.kuleuven.be/wannes.meert
 
 
 ## References
@@ -229,13 +266,17 @@ Development:
    In SIGKDD Workshop on Mining and Learning from Time Series, II. Association for Computing Machinery-ACM, 2016.
 6. C. Yanping, K. Eamonn, H. Bing, B. Nurjahan, B. Anthony, M. Abdullah and B. Gustavo.
    [The UCR Time Series Classification Archive](www.cs.ucr.edu/~eamonn/time_series_data/), 2015.
+7. D. F. Silva and G. E. Batista. 
+   [Speeding up all-pairwise dynamic time warping matrix calculation](http://sites.labic.icmc.usp.br/dfs/pdf/SDM_PrunedDTW.pdf),
+   In Proceedings of the 2016 SIAM International Conference on Data Mining, pages 837–845. SIAM, 2016.
+
 
 
 ## License
 
     DTAI distance code.
 
-    Copyright 2016-2019 KU Leuven, DTAI Research Group
+    Copyright 2016-2020 KU Leuven, DTAI Research Group
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
