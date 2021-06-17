@@ -21,6 +21,10 @@ runtest:
 test:
 	export PYTHONPATH=.;py.test --ignore=venv --benchmark-skip -vv
 
+.PHONY: test-windows
+test:
+	pytest --ignore=venv --benchmark-skip -vv -c pytest-nolibs.ini
+
 .PHONY: testall
 testall:
 	export PYTHONPATH=.;py.test --ignore=venv -vv
@@ -81,16 +85,22 @@ prepare_dist:
 	rm -rf dist/*
 	python3 setup.py sdist bdist_wheel
 
-.PHONY: deploy
-deploy: prepare_dist
+.PHONY: prepare_tag
+prepare_tag:
 	@echo "Check whether repo is clean"
 	git diff-index --quiet HEAD
 	@echo "Add tag"
 	git tag "v$$(python3 setup.py --version)"
 	git push --tags
+
+.PHONY: deploy
+deploy: prepare_dist prepare_tag
+	@echo "Check whether repo is clean"
+	git diff-index --quiet HEAD
 	@echo "Start uploading"
 	twine upload --repository dtaidistance dist/*
 
 .PHONY: docs
 docs:
 	export PYTHONPATH=..; cd docs; make html
+

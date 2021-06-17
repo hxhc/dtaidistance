@@ -1,9 +1,9 @@
 # -*- coding: UTF-8 -*-
 """
-dtaidistance.medoids
-~~~~~~~~~~~~~~~~~~~~
+dtaidistance.clustering.medoids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Time series clustering.
+Time series clustering using medoid-based methods.
 
 :author: Wannes Meert
 :copyright: Copyright 2020 KU Leuven, DTAI Research Group.
@@ -65,11 +65,12 @@ class Medoids:
             fig, ax = plt.subplots(nrows=1, ncols=2, frameon=False)
         else:
             fig, ax = None, axes
+        max_length = max(len(s) for s in self.series)
         ax[0].set_axis_off()
-        ax[0].set_xlim(left=0, right=tr_left_margin + ts_sample_length * len(self.series[0]))
+        ax[0].set_xlim(left=0, right=tr_left_margin + ts_sample_length * max_length)
         ax[0].set_ylim(bottom=0, top=bottom_margin + ts_height * len(self.series) + top_margin)
         ax[1].set_axis_off()
-        ax[1].set_xlim(left=0, right=ts_left_margin + ts_sample_length * len(self.series[0]))
+        ax[1].set_xlim(left=0, right=ts_left_margin + ts_sample_length * max_length)
         ax[1].set_ylim(bottom=0, top=bottom_margin + ts_height * len(self.series) + top_margin)
 
         if type(cmap) == str:
@@ -142,6 +143,7 @@ class KMedoids(Medoids):
         if np is None:
             raise NumpyException("The fit function requires Numpy to be installed.")
         self.series = SeriesContainer.wrap(series)
+        logger.debug(f'KMedoid: Compute distances between {len(self.series)} series')
         dists = self.dists_fun(self.series, **self.dists_options)
         # Make the matrix symmetric
         i_lower = np.tril_indices(len(self.series), -1)

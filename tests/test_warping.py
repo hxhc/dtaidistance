@@ -1,5 +1,6 @@
 import pytest
 import os
+import random
 from pathlib import Path
 
 from dtaidistance import dtw, util_numpy
@@ -42,6 +43,37 @@ def test_normalize2():
         np.testing.assert_almost_equal(paths1, paths2, decimal=4)
         np.testing.assert_almost_equal(path1, path2, decimal=4)
 
+
+@numpyonly
+def test_normalize2_prob():
+    psi = 0
+    if dtw.dtw_cc is not None:
+        dtw.dtw_cc.srand(random.randint(1, 100000))
+    else:
+        print("WARNING: dtw_cc not found")
+    with util_numpy.test_uses_numpy() as np:
+        s1 = np.array([0., 0, 1, 2, 1, 0, 1, 0, 0, 2, 1, 0, 0])
+        s2 = np.array([0., 1, 2, 3, 1, 0, 0, 0, 2, 1, 0, 0, 0])
+        d1, paths1 = dtw.warping_paths(s1, s2, psi=psi)
+        d2, paths2 = dtw.warping_paths_fast(s1, s2, psi=psi)
+        # print(np.power(paths1,2))
+        path1 = dtw.best_path(paths1)
+        path2 = dtw.best_path(paths2)
+        prob_paths = []
+        for i in range(30):
+            prob_paths.append(dtw.warping_path_prob_fast(s1, s2, d1/len(s1), psi=psi))
+        if not dtwvis.test_without_visualization():
+            if directory:
+                fig, ax = dtwvis.plot_warpingpaths(s1, s2, paths1, path1)
+                for p in prob_paths:
+                    py, px = zip(*p)
+                    py = [pyi + (random.random() - 0.5) / 5 for pyi in py]
+                    px = [pxi + (random.random() - 0.5) / 5 for pxi in px]
+                    ax[3].plot(px, py, ".-", color="yellow", alpha=0.25)
+                fig.savefig(directory / "normalize2_prob.png")
+        np.testing.assert_almost_equal(d1, d2, decimal=4)
+        np.testing.assert_almost_equal(paths1, paths2, decimal=4)
+        np.testing.assert_almost_equal(path1, path2, decimal=4)
 
 @numpyonly
 def test_warping_path1():
@@ -98,6 +130,44 @@ def test_psi_dtw_1c():
         s2 = np.sin(x - 1)
         d = dtw.distance_fast(s1, s2, psi=2)
         np.testing.assert_equal(d, 0.0)
+
+
+@numpyonly
+def test_psi_dtw_1d():
+    with util_numpy.test_uses_numpy() as np:
+        x = np.arange(0, 20, .5)
+        s1 = np.sin(x)
+        s2 = np.sin(x - 1)
+
+        random.seed(1)
+        for idx in range(len(s2)):
+            if random.random() < 0.05:
+                s2[idx] += (random.random() - 0.5) / 2
+
+        # print(f's1 = [' + ','.join(f'{vv:.2f}' for vv in s1) + ']')
+        # print(f's2 = [' + ','.join(f'{vv:.2f}' for vv in s2) + ']')
+
+        # print('distance_fast')
+        d1 = dtw.distance_fast(s1, s2, psi=2)
+        # print(f'{d1=}')
+        # print('warping_paths')
+        d2, paths = dtw.warping_paths(s1, s2, window=25, psi=2)
+        # print(f'{d2=}')
+        with np.printoptions(threshold=np.inf, linewidth=np.inf):
+            print(paths)
+        # print('warping_paths fast')
+        d3, paths = dtw.warping_paths_fast(s1, s2, window=25, psi=2)
+        # print(f'{d3=}')
+        # print(paths)
+        # print('best_path')
+        best_path = dtw.best_path(paths)
+
+        if not dtwvis.test_without_visualization():
+            if directory:
+                dtwvis.plot_warpingpaths(s1, s2, paths, best_path, filename=directory / "test_psi_dtw_1d.png")
+
+        np.testing.assert_almost_equal(d1, d2)
+        np.testing.assert_almost_equal(d1, d3)
 
 
 @numpyonly
@@ -158,10 +228,12 @@ if __name__ == "__main__":
     print(f"Saving files to {directory}")
     # test_normalize()
     # test_normalize2()
-    test_warping_path1()
+    # test_normalize2_prob()
+    # test_warping_path1()
     # test_psi_dtw_1a()
     # test_psi_dtw_1b()
     # test_psi_dtw_1c()
+    test_psi_dtw_1d()
     # test_psi_dtw_2a()
     # test_psi_dtw_2b()
     # test_twoleadecg_1()

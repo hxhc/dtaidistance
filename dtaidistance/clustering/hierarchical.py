@@ -1,9 +1,9 @@
 # -*- coding: UTF-8 -*-
 """
-dtaidistance.hierarchical
-~~~~~~~~~~~~~~~~~~~~~~~~~
+dtaidistance.clustering.hierarchical
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Time series clustering.
+Time series clustering using hierarchical clustering.
 
 :author: Wannes Meert
 :copyright: Copyright 2017-2020 KU Leuven, DTAI Research Group.
@@ -305,7 +305,8 @@ class BaseTree:
         # ax[0].add_line(Line2D((0,1),(2,2), lw=2, color='black', axes=ax[0]))
 
         ax[1].set_axis_off()
-        ax[1].set_xlim(left=0, right=ts_left_margin + ts_sample_length * len(self.series[0]))
+        max_length = max(len(s) for s in self.series)
+        ax[1].set_xlim(left=0, right=ts_left_margin + ts_sample_length * max_length)
         ax[1].set_ylim(bottom=0, top=bottom_margin + ts_height * len(self.series) + top_margin)
 
         if type(cmap) == str:
@@ -405,6 +406,8 @@ class BaseTree:
 class HierarchicalTree(BaseTree):
     """Wrapper to keep track of the full tree that represents the hierarchical clustering.
 
+    The linkage tree is available in self.linkage.
+
     :param model: Clustering object. For example of class :class:`Hierarchical`.
         If no model is given, the arguments are identical to those of class :class:`Hierarchical`.
     """
@@ -421,6 +424,10 @@ class HierarchicalTree(BaseTree):
             self._model.max_dist = float('inf')
 
     def fit(self, series, *args, **kwargs):
+        """Fit a hierarchical clustering tree.
+
+        The linkage tree is available in self.linkage.
+        """
         self.series = SeriesContainer.wrap(series)
         self.linkage = []
         new_nodes = {i: i for i in range(len(series))}
@@ -451,6 +458,8 @@ class HierarchicalTree(BaseTree):
 class LinkageTree(BaseTree):
     """Hierarchical clustering using the Scipy linkage function.
 
+    The linkage tree is available in self.linkage.
+
     This is the same but faster algorithm as available in Hierarchical (~10 times faster). But with less
     options to steer the clustering (e.g. no possibility to give weights). It still computes the entire
     distance matrix first and is thus not ideal for extremely large data sets.
@@ -469,6 +478,10 @@ class LinkageTree(BaseTree):
         self.method = method
 
     def fit(self, series):
+        """Fit a hierarchical clustering tree.
+
+        The linkage tree is available in self.linkage.
+        """
         if np is None:
             raise NumpyException("The fit function requires Numpy to be installed.")
         try:
@@ -484,6 +497,7 @@ class LinkageTree(BaseTree):
             idx += len(series) - r - 1
 
         self.linkage = linkage(dists_cond, method=self.method, metric='euclidean')
+        return self.linkage
 
     def _size_cond(self, size):
         n = int(size)

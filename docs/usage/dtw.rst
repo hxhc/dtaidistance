@@ -100,7 +100,7 @@ DTW and keep all warping paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If, next to the distance, you also want the full matrix to see all
-possible warping paths:
+possible warping paths, also alled the accumulated cost matrix:
 
 ::
 
@@ -111,7 +111,7 @@ possible warping paths:
     print(distance)
     print(paths)
 
-The matrix with all warping paths can be visualised as follows:
+The matrix with all warping paths (or accumulated cost matrix) can be visualised as follows:
 
 ::
 
@@ -254,24 +254,27 @@ Multi-dimensionsal DTW
 
 Compare two multi-dimensional sequences.
 
-Assumes the first dimension to be the sequence item index, and the second
-dimension to be the series index (thus timestep).
+Assumes the first dimension of the data structure to be the sequence item index
+(or time series index).
 
-Example:
+For example, two 2-dimensional series with five timesteps:
 
 ::
 
-    s1 = np.array([[0, 0],
-                   [0, 1],
-                   [2, 1],
-                   [0, 1],
-                   [0, 0]], dtype=np.double)
-    s2 = np.array([[0, 0],
-                   [2, 1],
-                   [0, 1],
-                   [0, .5],
-                   [0, 0]], dtype=np.double)
-    d = distance(s1, s2)
+    from dtaidistance import dtw_ndim
+
+    series1 = np.array([[0, 0],  # first 2-dim point at t=0
+                        [0, 1],  # second 2-dim point at t=1
+                        [2, 1],
+                        [0, 1],
+                        [0, 0]], dtype=np.double)
+    series2 = np.array([[0, 0],
+                        [2, 1],
+                        [0, 1],
+                        [0, .5],
+                        [0, 0]], dtype=np.double)
+    d = dtw_ndim.distance(series1, series2)
+
 
 This method returns the dependent DTW (DTW_D) distance between two
 n-dimensional sequences. If you want to compute the independent DTW
@@ -281,4 +284,4 @@ n-dimensional sequences. If you want to compute the independent DTW
 
     dtw_i = 0
     for dim in range(ndim):
-        dtw_i += dtw.distance(s1[:,dim], dtw.distance(s2[:,dim])
+        dtw_i += dtw.distance(s1[:,dim], s2[:,dim])

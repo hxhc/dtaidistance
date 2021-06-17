@@ -38,7 +38,8 @@ linkage method).
     cluster_idx = model3.fit(timeseries)
 
 For models that keep track of the full clustering tree
-(``HierarchicalTree`` or ``LinkageTree``), the tree can be visualised (see figure at top of this page):
+(``HierarchicalTree`` or ``LinkageTree``), the tree is available in ``model.linkage`` and
+can be visualised (see figure at top of this page):
 
 ::
 
@@ -55,6 +56,57 @@ time series to ``ax[1]``.
     model.plot("hierarchy.png", axes=ax, show_ts_label=show_ts_label,
                show_tr_label=True, ts_label_margin=-10,
                ts_left_margin=10, ts_sample_length=1)
+
+
+K-Means DBA clustering
+~~~~~~~~~~~~~~~~~~~~~~
+
+K-means clustering for time series requires an averaging strategy for
+time series. One possibility is DTW Barycenter Averaging (DBA).
+
+**Example**:
+
+For example, to cluster the `Trace <https://timeseriesclassification.com/description.php?Dataset=Trace>`_
+dataset by Davide Roverso.
+
+::
+
+    model = KMeans(k=4, max_it=10, max_dba_it=10, dists_options={"window": 40})
+    cluster_idx, performed_it = model.fit(series, use_c=True, use_parallel=False)
+
+
+.. figure:: https://people.cs.kuleuven.be/wannes.meert/dtw/kmeans.png?v=2
+   :alt: KMeans clustering
+
+**DTW Barycenter Averaging**:
+
+If you only want to run DTW Barycenter Averaging once or multiple times:
+
+::
+
+    new_center = dtw_barycenter.dba(series, center, use_c=True)
+    new_center = dtw_barycenter.dba_loop(series, center, max_it=10, thr=0.0001, use_c=True)
+
+
+**Example with differencing**:
+
+For the Trace example above, the clustering is not perfect because the different
+series have slightly different baselines that cannot be corrected with
+normalization. This causes an accumulated error that is larger than the
+subtle sine wave in one of the types of series. A possible solution is to
+apply differencing on the signals to focus on the changes in the series.
+Additionally, we also apply a low-pass filter the avoid accumulation of
+noise.
+
+::
+
+    series = dtaidistance.preprocessing.differencing(series, smooth=0.1)
+    model = KMeans(k=4, max_it=10, max_dba_it=10, dists_options={"window": 40})
+    cluster_idx, performed_it = model.fit(series, use_c=True, use_parallel=False)
+
+
+.. figure:: https://people.cs.kuleuven.be/wannes.meert/dtw/kmeans_differencing.png?v=1
+   :alt: KMeans clustering with differencing and low-pass filter
 
 
 K-Medoids clustering
@@ -85,30 +137,6 @@ class.
 
 .. figure:: https://people.cs.kuleuven.be/wannes.meert/dtw/kmedoids.png?v=1
    :alt: KMedoids clustering
-
-
-K-Means DBA clustering
-~~~~~~~~~~~~~~~~~~~~~~
-
-K-means clustering for time series requires an averaging strategy for
-time series. One possibility is DTW Barycenter Averaging (DBA).
-
-::
-
-    model = KMeans(k=4, max_it=10, max_dba_it=10, dists_options={"window": 40}, )
-    cluster_idx, performed_it = model.fit(series, use_c=True, use_parallel=False)
-
-
-.. figure:: https://people.cs.kuleuven.be/wannes.meert/dtw/kmeans.png?v=2
-   :alt: KMeans clustering
-
-If you only want to run DTW Barycenter Averaging once or multiple times:
-
-::
-
-    new_center = dtw_barycenter.dba(series, center, use_c=True)
-    new_center = dtw_barycenter.dba_loop(series, center, max_it=10, thr=0.0001, use_c=True)
-
 
 
 Active semi-supervised clustering
